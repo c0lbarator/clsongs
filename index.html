@@ -1,18 +1,161 @@
-<link href='https://fonts.googleapis.com/css?family=Roboto:100' rel='stylesheet' type='text/css'>
-<link rel="stylesheet" href="style.css">
-<script src="script.js"></script>
-<div class="player">
-	    <canvas></canvas>
-		<div class="song">
-			<div class="artist">Kavinsky</div>
-			<div class="name">Odd Look ft. The Weeknd</div>
-		</div>
-		<div class="playarea">
-			<div class="prevSong"></div>
-			<div class="play"></div>
-			<div class="pause"></div>
-			<div class="nextSong"></div>
-		</div>
-		<div class="soundControl"></div>
-		<div class="time">00:00</div>
-	</div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Виниловый проигрыватель</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .player {
+            background-color: #8B4513;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .record {
+            width: 300px;
+            height: 300px;
+            background-color: #000;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: spin 5s linear infinite;
+            animation-play-state: paused;
+        }
+        .record.playing {
+            animation-play-state: running;
+        }
+        .cover {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .control-btn {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #trackInfo {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+</head>
+<body>
+    <div class="player">
+        <div class="record" id="record">
+            <img src="" alt="Album Cover" class="cover" id="cover">
+        </div>
+        <div id="trackInfo"></div>
+        <audio id="audio"></audio>
+        <div class="controls">
+            <button class="control-btn" id="prevBtn">Предыдущий</button>
+            <button class="control-btn" id="playPauseBtn">Играть</button>
+            <button class="control-btn" id="nextBtn">Следующий</button>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const record = document.getElementById('record');
+        const cover = document.getElementById('cover');
+        const trackInfo = document.getElementById('trackInfo');
+
+        const playlist = ['90sFlav - Call me.mp3', 'Alok,Bruno Martini,Zeeba - Hear Me Now.mp3', 'Arnon - Te Molla (2019 Version).mp3', 'Arnon,Jonisa - G Paradise.mp3', 'Boyce Avenue - LoveMe Like You Do.mp3', 'Charli XCX - Boom Clap.mp3', 'Charlie Puth - Attention.mp3', 'Coldplay - Hymn For The Weekend.mp3', 'DNCE - Cake By The Ocean.mp3', 'Dean Martin - Let It Snow, Let It Snow, Let It Snow (Remastered).mp3', 'Dennis Lloyd - Nevermind.mp3', 'Drake - Hotline Bling.mp3', 'Echosmith - Over My Head.mp3', 'Ed Sheeran,Galantis - Shape of You (Galantis Remix).mp3', 'Eduardo Luzquiños,Deeper Version - Deep End (Remix).mp3', 'Eduardo Luzquiños,Deeper Version - Wrap Me In Plastic(TikTok Remix).mp3', 'El Profesor - Bella ciao (HUGEL Remix).mp3', 'Emma Peters,Edmofo Remix - Clandestina (Cover).mp3', 'Engelwood,KyleYouMadeThat - Crystal Dolphin.mp3', 'Exile - Lost Control.mp3', 'Fitz and The Tantrums - I Just Wanna Shine (Radio Edit).mp3', 'Flo Rida - GDFR.mp3', 'Flo Rida,Sia - Wild Ones (feat. Sia).mp3', 'Fousheé,Sleepy Hallow - Deep End Freestyle.mp3', 'Gavin Mikhail - Demons (Imagine Dragons Cover).mp3', 'Gesaffelstein,The Weeknd - Lost in the Fire.mp3', 'Gotye,Kimbra - Somebody That I Used To Know.mp3', 'Grover Washington, Jr.,Bill Withers - Just the Two of Us (из сериала «Офис»).mp3', 'Jay-Z,Alicia Keys - Empire State Of Mind [Jay-Z + Alicia Keys].mp3', 'Joakim Karud - Dreams.mp3', "Kit Kot - Among US but It's a Trap.mp3", 'Lana Del Rey,Cedric Gervais - Summertime Sadness (Cedric Gervais Remix  Radio Edit).mp3', 'Lil Peep,XXXTentacion - Falling Down (Bonus Track).mp3', 'M83 - Midnight City.mp3', 'MagnusTheMagnus - Area.mp3', 'Martin Solveig,Dragonette - Hello (Radio Edit feat. Dragonette).mp3', 'Mattafix - Big City Life.mp3', 'Mounika.,Cavetown - Cut My Hair.mp3', 'Mr.Kitty - After Dark.mp3', 'Natasja - Calabria 2008.mp3', 'Neon Trees - Everybody Talks.mp3', 'One-T - The Magic Key.mp3', 'Paul Anka - Put Your Head On My Shoulder (Original).mp3', 'Pompeya - 90.mp3', 'Queen - We Will Rock You.mp3', 'SALES - Chinese New Year.mp3', 'SOULLESS PRINCE - Барбарики (Prod. by LONE.OFF BEATS).mp3', 'Sada Baby - Whole Lotta Choppas.mp3', "Sam Smith - I'm Not The Only One (Radio Edit).mp3", 'Shou - Juless Edits.mp3', 'Skrillex,Sirah - Bangarang (из фильма «Дэдпул 2»).mp3', 'Sofia Mills - Coffee Breath.mp3', 'The Chainsmokers,Coldplay - Something Just Like This.mp3', 'The Irrepressibles - In This Shirt.mp3', 'Troyboi - Do You.mp3', 'Troyboi - KinjaBang.mp3', 'Troyboi,Stooki Sound - W2L (Welcome To London).mp3', 'Wham! - Last Christmas (из фильма «Рождество на двоих»).mp3', 'Yeah Yeah Yeahs - Heads Will Roll.mp3', 'blackbear - idfc.mp3', 'twenty one pilots - Heathens (из фильма «Отряд самоубийц»).mp3', 'twenty one pilots - Stressed Out.mp3', 'will.i.am,Britney Spears - Scream & Shout (Radio Edit).mp3', 'Альянс - На заре.mp3', 'Артём Зайцев - Life.mp3', 'Монеточка - Падать в грязь.mp3', 'Мы - 2.mp3', 'Найтивыход,Папин Олимпос - телу тоже больно.mp3', 'Папин Олимпос - Тёмно-оранжевый закат.mp3', 'Элли на маковом поле - Любовь моя.mp3', 'нежность на бумаге - Играем.mp3']; // Просто список файлов
+        let currentTrack = 0;
+
+        function loadTrack(trackIndex) {
+            if (trackIndex < 0) trackIndex = playlist.length - 1;
+            if (trackIndex >= playlist.length) trackIndex = 0;
+
+            currentTrack = trackIndex;
+            const track = playlist[currentTrack];
+
+            audio.src = track;
+            playPauseBtn.textContent = 'Играть';
+            record.classList.remove('playing');
+
+            // Чтение метаданных из MP3 файла
+            jsmediatags.read(track, {
+                onSuccess: function(tag) {
+                    const { title, artist, album, picture } = tag.tags;
+
+                    // Обновление информации о треке
+                    trackInfo.textContent = `${title || 'Unknown Title'} - ${artist || 'Unknown Artist'}`;
+
+                    // Обновление обложки
+                    if (picture) {
+                        const { data, format } = picture;
+                        let base64String = "";
+                        for (let i = 0; i < data.length; i++) {
+                            base64String += String.fromCharCode(data[i]);
+                        }
+                        cover.src = `data:${format};base64,${window.btoa(base64String)}`;
+                    } else {
+                        cover.src = 'cover.jpg'; // Путь к обложке по умолчанию
+                    }
+                },
+                onError: function(error) {
+                    console.log('Error reading tags: ', error.type, error.info);
+                    trackInfo.textContent = `${track} (Metadata not available)`;
+                    cover.src = 'cover.jpg'; // Путь к обложке по умолчанию
+                }
+            });
+        }
+
+        function playPause() {
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.textContent = 'Пауза';
+                record.classList.add('playing');
+            } else {
+                audio.pause();
+                playPauseBtn.textContent = 'Играть';
+                record.classList.remove('playing');
+            }
+        }
+
+        playPauseBtn.addEventListener('click', playPause);
+        prevBtn.addEventListener('click', () => loadTrack(currentTrack - 1));
+        nextBtn.addEventListener('click', () => loadTrack(currentTrack + 1));
+
+        audio.addEventListener('ended', () => loadTrack(currentTrack + 1));
+
+        loadTrack(0);
+    </script>
+</body>
+</html>
